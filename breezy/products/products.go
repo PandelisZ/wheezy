@@ -10,8 +10,8 @@ import (
 )
 
 type ProductService struct {
-	Client   http.Client
-	products []product
+	Client   *http.Client
+	products []Product
 }
 
 type productUpstream struct {
@@ -22,7 +22,7 @@ type productUpstream struct {
 	Category string `json:"category"`
 }
 
-type product struct {
+type Product struct {
 	Id       int     `json:"id"`
 	Name     string  `json:"name"`
 	Price    float32 `json:"price"`
@@ -37,7 +37,7 @@ type category struct {
 
 const productAPI = "https://run.mocky.io/v3/87beb2be-15bb-4b42-99b5-d826daaf8689"
 
-func (ps ProductService) fetch() ([]product, error) {
+func (ps ProductService) fetch() ([]Product, error) {
 
 	// Used cached products if we have already fetched
 	if ps.products != nil {
@@ -74,10 +74,10 @@ func (ps ProductService) fetch() ([]product, error) {
 		return nil, jsonErr
 	}
 
-	products := make([]product, len(productsDirty))
+	products := make([]Product, len(productsDirty))
 	for k, val := range productsDirty {
 		floatPrice, _ := strconv.ParseFloat(val.Price, 32)
-		products[k] = product{
+		products[k] = Product{
 			Id:       val.Id,
 			Name:     val.Name,
 			Price:    float32(floatPrice),
@@ -91,7 +91,7 @@ func (ps ProductService) fetch() ([]product, error) {
 	return products, nil
 }
 
-func (ps ProductService) All() ([]product, error) {
+func (ps ProductService) All() ([]Product, error) {
 	products, err := ps.fetch()
 	if err != nil {
 		return nil, err
@@ -137,18 +137,32 @@ func (ps ProductService) CategoryHandler(w http.ResponseWriter, r *http.Request)
 	w.Write(payload)
 }
 
-func (ps ProductService) categories() ([]*category, error) {
+func (ps ProductService) ProductByID() (map[int]Product, error) {
 	products, err := ps.fetch()
 	if err != nil {
 		return nil, err
 	}
-	categories := make(map[string]*category)
+
+	ids := make(map[int]Product)
+	for _, p := range products {
+		ids[p.Id] = p
+	}
+
+	return ids, nil
+}
+
+func (ps ProductService) categories() ([]category, error) {
+	products, err := ps.fetch()
+	if err != nil {
+		return nil, err
+	}
+	categories := make(map[string]category)
 	for _, p := range products {
 		if val, ok := categories[p.Category]; ok {
 			val.Items = val.Items + 1
 			categories[p.Category] = val
 		} else {
-			categories[p.Category] = &category{
+			categories[p.Category] = category{
 				Name:  p.Category,
 				Items: 1,
 			}
@@ -156,7 +170,7 @@ func (ps ProductService) categories() ([]*category, error) {
 
 	}
 
-	var categoryArray []*category
+	var categoryArray []category
 	for _, val := range categories {
 		categoryArray = append(categoryArray, val)
 	}
