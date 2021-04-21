@@ -21,6 +21,11 @@ type product struct {
 	Category string `json:"category"`
 }
 
+type category struct {
+	Name  string `json:"name"`
+	Items int    `json:"items"`
+}
+
 const productAPI = "https://run.mocky.io/v3/87beb2be-15bb-4b42-99b5-d826daaf8689"
 
 func (ps ProductService) fetch() ([]product, error) {
@@ -91,4 +96,48 @@ func (ps ProductService) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(payload)
+}
+
+func (ps ProductService) CategoryHandler(w http.ResponseWriter, r *http.Request) {
+	cat, readErr := ps.categories()
+	if readErr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(w, readErr.Error())
+		return
+	}
+
+	payload, err := json.Marshal(&cat)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(w, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(payload)
+}
+
+func (ps ProductService) categories() ([]*category, error) {
+	products, err := ps.fetch()
+	if err != nil {
+		return nil, err
+	}
+	categories := make(map[string]*category)
+	for _, p := range products {
+		if val, ok := categories[p.Category]; ok {
+			val.Items = val.Items + 1
+			categories[p.Category] = val
+		} else {
+			categories[p.Category] = &category{
+				Name:  p.Category,
+				Items: 1,
+			}
+		}
+
+	}
+
+	var categoryArray []*category
+	for _, val := range categories {
+		categoryArray = append(categoryArray, val)
+	}
+	return categoryArray, nil
 }

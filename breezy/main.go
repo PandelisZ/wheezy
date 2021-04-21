@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -21,8 +22,11 @@ func main() {
 	}
 
 	r.HandleFunc("/products", pService.Handler).Methods(http.MethodGet)
+	r.HandleFunc("/categories", pService.CategoryHandler).Methods(http.MethodGet)
 	http.Handle("/", r)
 
-	log.Println("Listening on http://localhost:3000")
-	log.Fatal(http.ListenAndServe(":3000", nil))
+	handler := cors.Default().Handler(r)
+
+	log.Println("Listening on http://localhost:8080")
+	log.Fatal(http.ListenAndServe("127.0.0.1:8080", handler))
 }
