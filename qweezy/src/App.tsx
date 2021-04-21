@@ -1,10 +1,9 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, {useState} from 'react';
 import './App.css';
-import { Alert, Paper, Pill } from '@connctd/quartz';
+import { Alert, Pill } from '@connctd/quartz';
 import styled from '@emotion/styled';
 import { Action, useQuery } from 'react-fetching-library';
-
+import orderBy from 'lodash.orderby'
 
 const StyledCategory = styled.div``
 
@@ -28,7 +27,7 @@ const Categories: React.FC = () => {
   <ProductContainer>
     {loading && <h1>Loading...</h1>}
     {error && <Alert>{error}</Alert>}
-    {payload && payload.map(c => <CategorySelect {...c} />)}
+    {payload && payload.map(c => <CategorySelect key={c.name} {...c} />)}
   </ProductContainer>)
 }
 
@@ -40,7 +39,7 @@ const fetchProductsList: Action<ProductApiItem[]> = {
 interface ProductApiItem {
   id: number
   name: string
-  price: string
+  price: number
   quantity: number
   category: string
 }
@@ -98,13 +97,15 @@ const Category = styled.div`
 
 `
 
+const GBP = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' })
+
 const Product: React.FC<ProductApiItem> = ({name, price, category, quantity}) => (
   <StyledProduct>
     <img src="https://via.placeholder.com/120" alt=""/>
     <ProductText>
       <h2>{name}</h2>
       <ProductMeta>
-        <Price>£ {price}</Price>
+        <Price>{GBP.format(price)}</Price>
         <Category>{category}</Category>
         <Availability>{quantity} left</Availability>
       </ProductMeta>
@@ -112,6 +113,55 @@ const Product: React.FC<ProductApiItem> = ({name, price, category, quantity}) =>
     </ProductText>
   </StyledProduct>
 )
+
+const Button = styled.button`
+  background-color: rgb(34, 150, 255);
+  color: white;
+  border: 0;
+  font-size: 14px;
+  padding: 2px 10px;
+  margin: 10px;
+  cursor: pointer;
+`
+
+const SortableProductList: React.FC<{products: ProductApiItem[]}> = ({products}) => {
+
+  const [sortedProducts, setProducts] = useState(products)
+  const [sortingDirection, setSorting] = useState<{[key:string]:string}>({
+    price: 'desc',
+    quantity: 'desc'
+  })
+
+  const sort = (sorting: 'price'|'quantity') => {
+    if (sortingDirection[sorting] === 'desc') {
+      setProducts(orderBy(sortedProducts, sorting, 'desc'))
+      setSorting({
+        ...sortingDirection,
+        [sorting]: 'asc',
+      })
+    } else {
+      sortedProducts.sort((a,b) => {
+        return a[sorting] - b[sorting]
+      })
+      setProducts(orderBy(sortedProducts, sorting, 'asc'))
+      setSorting({
+        ...sortingDirection,
+        [sorting]: 'desc',
+      })
+    }
+
+  }
+
+  return (
+  <ProductContainer>
+
+    <Button onClick={() => sort('price')}>Sort By Price</Button>
+    <Button onClick={() => sort('quantity')}>Sort By Quantity</Button>
+
+    {sortedProducts.map(p => <Product key={p.id} {...p} />)}
+  </ProductContainer>
+  )
+}
 
 
 const ProductList = () => {
@@ -128,7 +178,7 @@ const ProductList = () => {
   }
 
   if (payload) {
-    return <ProductContainer>{payload.map(p => <Product {...p} />)}</ProductContainer>
+    return <SortableProductList products={payload}/>
   }
 
   return <div>Could not fetch products</div>

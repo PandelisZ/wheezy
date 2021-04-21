@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type ProductService struct {
@@ -13,12 +14,20 @@ type ProductService struct {
 	products []product
 }
 
-type product struct {
+type productUpstream struct {
 	Id       int    `json:"id"`
 	Name     string `json:"name"`
 	Price    string `json:"price"`
 	Quantity int    `json:"quantity"`
 	Category string `json:"category"`
+}
+
+type product struct {
+	Id       int     `json:"id"`
+	Name     string  `json:"name"`
+	Price    float32 `json:"price"`
+	Quantity int     `json:"quantity"`
+	Category string  `json:"category"`
 }
 
 type category struct {
@@ -58,11 +67,23 @@ func (ps ProductService) fetch() ([]product, error) {
 		return nil, readErr
 	}
 
-	products := []product{}
-	jsonErr := json.Unmarshal(body, &products)
+	productsDirty := []productUpstream{}
+	jsonErr := json.Unmarshal(body, &productsDirty)
 	if jsonErr != nil {
 		log.Print(jsonErr)
 		return nil, jsonErr
+	}
+
+	products := make([]product, len(productsDirty))
+	for k, val := range productsDirty {
+		floatPrice, _ := strconv.ParseFloat(val.Price, 32)
+		products[k] = product{
+			Id:       val.Id,
+			Name:     val.Name,
+			Price:    float32(floatPrice),
+			Quantity: val.Quantity,
+			Category: val.Category,
+		}
 	}
 
 	ps.products = products
