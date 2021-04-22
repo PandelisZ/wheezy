@@ -34,5 +34,5 @@ func main() {
 	handler := cors.Default().Handler(r)
 
 	log.Println("Listening on http://localhost:8080")
-	log.Fatal(http.ListenAndServe("127.0.0.1:8080", handler))
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }
